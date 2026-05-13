@@ -1,0 +1,14 @@
+artifact_uri: file:c:/Users/DELL£/Downloads/projet ocp/mlruns/784983842841748655/acc3dea3609743c8a279a02a072ddbb3/artifacts
+end_time: 1778652588081
+entry_point_name: ''
+experiment_id: '784983842841748655'
+lifecycle_stage: active
+run_id: acc3dea3609743c8a279a02a072ddbb3
+run_name: BEST_MODEL_RF_Baseline
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1778652579217
+status: 3
+tags: []
+user_id: DELL£
