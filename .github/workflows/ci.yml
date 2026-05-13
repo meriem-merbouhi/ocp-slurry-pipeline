@@ -43,8 +43,18 @@ jobs:
       - name: Test prediction logic
         run: |
           python -c "
-          from app.model import predict_failure
-          print('✅ predict_failure importé OK')
+          from app.model import predict
+          from app.schemas import SensorInput
+          s = SensorInput(
+              air_temp_k=298.5,
+              process_temp_k=308.7,
+              rotation_speed_rpm=1551.0,
+              torque_nm=42.8,
+              tool_wear_min=108.0,
+              station_type='M'
+          )
+          result = predict(s)
+          print('✅ predict OK — risk:', result.risk_level)
           "
 
       - name: CI Summary
