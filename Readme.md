@@ -192,5 +192,5 @@ Le workflow `.github/workflows/ci.yml` exécute automatiquement 6 tests à chaqu
 ## Auteur
 
 **Meriem Merbouhi** — Data Analyst & Data Scientist  
-📧 meriem.merbouhi@hightech.edu  
+📧 meriemmerbouhi36@gmail.com 
 🔗 [GitHub](https://github.com/meriem-merbouhi/ocp-slurry-pipeline)
