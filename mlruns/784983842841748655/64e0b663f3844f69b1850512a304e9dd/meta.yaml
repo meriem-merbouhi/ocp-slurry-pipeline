@@ -1,0 +1,14 @@
+artifact_uri: file:c:/Users/DELL£/Downloads/projet ocp/mlruns/784983842841748655/64e0b663f3844f69b1850512a304e9dd/artifacts
+end_time: 1778652577880
+entry_point_name: ''
+experiment_id: '784983842841748655'
+lifecycle_stage: active
+run_id: 64e0b663f3844f69b1850512a304e9dd
+run_name: RF_Agressif
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1778652559065
+status: 3
+tags: []
+user_id: DELL£

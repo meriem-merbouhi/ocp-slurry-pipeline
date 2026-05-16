@@ -1,102 +1,104 @@
-# 🏭 OCP Slurry Pipeline — Predictive Maintenance Platform
+# OCP Slurry Pipeline — Predictive Maintenance Platform
 
-<div align="center">
+**Pipeline de données End-to-End | Azure + Databricks + Power BI + ML**
 
-![Phase 1](https://img.shields.io/badge/Phase%201-Complete-brightgreen?style=for-the-badge)
-![Phase 2](https://img.shields.io/badge/Phase%202-In%20Progress-yellow?style=for-the-badge)
-![Python](https://img.shields.io/badge/Python-3.13-blue?style=for-the-badge&logo=python)
-![Azure](https://img.shields.io/badge/Azure-ADLS%20Gen2-0078D4?style=for-the-badge&logo=microsoftazure)
-![Databricks](https://img.shields.io/badge/Databricks-Spark%204.1-FF3621?style=for-the-badge&logo=databricks)
-![Power BI](https://img.shields.io/badge/Power%20BI-Dashboard-F2C811?style=for-the-badge&logo=powerbi)
-![MLflow](https://img.shields.io/badge/MLflow-Tracking-0194E2?style=for-the-badge&logo=mlflow)
-![Docker](https://img.shields.io/badge/Docker-Container-2496ED?style=for-the-badge&logo=docker)
-
-**Plateforme de maintenance prédictive pour le pipeline slurry OCP Khouribga — Jorf Lasfar (235 km)**
-
-*Prédiction des pannes 24–48h à l'avance · Stack Azure Enterprise · Lakehouse Medallion*
-
-[Architecture](#architecture) • [Dataset](#dataset) • [Stack](#stack-technique) • [Progression](#progression) • [Lancer](#lancer-le-projet)
-
-</div>
+[![CI/CD](https://github.com/meriem-merbouhi/ocp-slurry-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/meriem-merbouhi/ocp-slurry-pipeline/actions)
 
 ---
 
-## Contexte Industriel
+## Problématique
 
-Le **Slurry Pipeline OCP** transporte un mélange eau + phosphate broyé sur 235 km entre Khouribga et Jorf Lasfar, via **8 stations de pompage** équipées de ~1 200 capteurs (pression, débit, température, vibrations, pH).
+OCP (Office Chérifien des Phosphates) transporte le phosphate via un pipeline slurry de plusieurs centaines de kilomètres. Chaque panne de pompe coûte des millions de dirhams par heure.
 
-| Paramètre | Valeur |
-|---|---|
-| Longueur | 235 km |
-| Débit nominal | 8 500 – 9 200 m³/h |
-| Capteurs actifs | ~1 200 tags IoT |
-| Coût panne non prévue | Plusieurs millions MAD/jour |
-| **Objectif** | **Prédire les pannes 24–48h à l'avance** |
+**Question centrale : Comment anticiper une panne avant qu'elle se produise ?**
 
 ---
 
-## Architecture
-
-![Architecture Lakehouse](docs/architecture.png)
-
-### Lakehouse Medallion — Bronze → Silver → Gold
+## Architecture — Pipeline Medallion
 
 ```
-[Kaggle Dataset]
-      │
-      ▼  upload_bronze.py (azure-storage SDK)
-[ADLS Gen2 · datalakeocp2026 · swedencentral]
-      │
-      ├── bronse/sensors_raw/     ← Bronze : données brutes CSV
-      ├── silver/                 ← Silver : données nettoyées Delta Lake
-      └── gold/                   ← Gold : Star Schema Power BI
-      │
-      ▼  Databricks Spark 4.1
-[Notebook 01_bronze_silver.ipynb]  → Nettoyage + Feature Engineering
-[Notebook 02_silver_gold.ipynb]    → Star Schema + Data Marts
-      │
-      ▼  Azure Data Factory (trigger 02h00/nuit)
-[FACT_SENSOR_EVENTS + DIM_STATION + DIM_EQUIPMENT + DIM_DATE]
-      │
-      ├──▶ [MLflow + XGBoost]  → API FastAPI + Docker + Azure ML
-      └──▶ [Power BI Service]  → Dashboard 3 profils + RLS
+Données capteurs (CSV)
+        ↓
+[Bronze] ADLS Gen2 — données brutes intactes
+        ↓  PySpark ETL (nettoyage IQR + SLA > 95%)
+[Silver] Databricks — données propres + feature engineering
+        ↓  11 nouvelles variables physiques dérivées
+[Gold]   Star Schema — 5 tables analytiques Delta Lake
+        ↓
+[ML]     Random Forest — F1=0.864 / AUC=0.973 / Seuil=0.39
+        ↓
+[API]    FastAPI + Docker — endpoint /predict temps réel
+        ↓
+[BI]     Power BI DirectQuery — 3 dashboards (DG / Analyste / DS)
 ```
-
----
-
-## Dataset
-
-| Dataset | Source | Lignes | Description |
-|---|---|---|---|
-| **AI4I 2020 Predictive Maintenance** | Kaggle | 10 000 | Capteurs industriels réels : température, RPM, torque, usure outil. Label panne inclus. |
-| **Predictive Maintenance v3** | Kaggle | ~50 000 | Dataset complémentaire multi-capteurs avec anomalies étiquetées |
-
-### Correspondance Colonnes → Nomenclature OCP
-
-| Colonne Kaggle | Nom OCP Projet | Unité | Description |
-|---|---|---|---|
-| `Air temperature [K]` | `temperature_air` | K | Température ambiante |
-| `Process temperature [K]` | `temperature_process` | K | Température process |
-| `Rotational speed [rpm]` | `rotational_speed` | RPM | Vitesse rotation pompe |
-| `Torque [Nm]` | `torque` | Nm | Couple mécanique |
-| `Tool wear [min]` | `tool_wear` | min | Usure outil (proxy vibrations) |
-| `Machine failure` | `label_panne` | 0/1 | **Cible ML** : 0=normal, 1=panne |
 
 ---
 
 ## Stack Technique
 
-| Outil | Rôle | Pourquoi |
-|---|---|---|
-| **Azure ADLS Gen2** | Stockage Bronze/Silver/Gold | Standard Microsoft Big Data industriel |
-| **Databricks Spark 4.1** | Transformation ETL + ML | Plateforme n°1 Data Engineering en entreprise |
-| **Delta Lake** | Format stockage ACID | Transactions, Time Travel, Schema Evolution |
-| **Azure Data Factory** | Orchestration pipeline | Trigger automatique 02h00 chaque nuit |
-| **XGBoost + MLflow** | ML + Tracking expériences | F1 > 0.85 · AUC > 0.92 |
-| **FastAPI + Docker** | API prédiction REST | POST /predict → probabilité panne < 200ms |
-| **Azure ML** | Déploiement endpoint | Managed Online Endpoint production |
-| **Power BI Service** | Dashboard + RLS | 3 profils : DG · Analyste · Data Scientist |
-| **GitHub Actions** | CI/CD | Push → Tests → Rebuild → Redéploiement |
+| Couche | Technologies |
+|--------|-------------|
+| Cloud | Azure ADLS Gen2, Azure Data Factory |
+| Traitement | Azure Databricks, PySpark, Python 3.12 |
+| ML | Scikit-learn, Random Forest, MLflow |
+| API | FastAPI, Docker, Pydantic |
+| BI | Power BI DirectQuery, DAX |
+| CI/CD | GitHub Actions |
+
+---
+
+## Résultats
+
+| Métrique | Valeur | Objectif | Statut |
+|----------|--------|----------|--------|
+| Disponibilité pipeline | **96.52%** | > 97% | Proche cible |
+| F1-Score ML | **0.864** | > 0.85 | ✅ Atteint |
+| AUC-ROC | **0.973** | > 0.92 | ✅ Atteint |
+| Précision pannes | **0.947** | — | ✅ Excellent |
+| Recall pannes | **0.794** | — | ✅ Bon |
+| Seuil optimal | **0.39** | 0.50 défaut | ✅ Calibré |
+| Pannes détectées | **348 / 10 000** | — | ✅ Validé |
+| SLA qualité Silver | **> 95%** | > 95% | ✅ Atteint |
+| Tests CI/CD | **6/6** | 100% | ✅ Badge vert |
+
+---
+
+## Dashboards Power BI
+
+### Vue Directeur Général — Disponibilité & KPIs stratégiques
+
+![Dashboard DG](images/04_dashboard_dg.png.jpg)
+
+> Disponibilité 96.52% vs cible 97% | MTBF 27.74 | Station L = 70% des pannes
+
+---
+
+### Vue Analyste — Analyse opérationnelle des pannes
+
+![Dashboard Analyste](images/05_dashboard_analyste.png.jpg)
+
+> Zone de danger : torque > 50Nm + rotation < 1400 RPM | Pic de 100 pannes le 5 janvier | Station L + OSF = priorité maintenance
+
+---
+
+### Vue Data Scientist — Performances du modèle ML
+
+![Dashboard Data Scientist](images/06_dashboard_datascientist.png.jpg)
+
+> F1=0.864 | AUC=0.973 | 3 runs MLflow comparés | Top 5 features importances
+
+---
+
+## Feature Engineering — Variables clés
+
+| Feature | Formule | Signal détecté |
+|---------|---------|----------------|
+| `temp_diff` | process_temp - air_temp | HDF si < 8.6K |
+| `power_estimated_w` | torque × rotation × (2π/60) | PWF si chute |
+| `tool_wear_rate` | tool_wear / (rotation + 1) | TWF si > seuil |
+| `torque_speed_ratio` | torque / (rotation + 1) | OSF si surcharge |
+
+**Impact : F1-Score passe de 0.57 (sans) → 0.864 (avec) — amélioration de +51%**
 
 ---
 
@@ -104,132 +106,91 @@ Le **Slurry Pipeline OCP** transporte un mélange eau + phosphate broyé sur 235
 
 ```
 ocp-slurry-pipeline/
-│
-├── README.md                        # Ce fichier
-├── requirements.txt                 # Dépendances Python
-├── generate_architecture.py         # Génère docs/architecture.png
-│
-├── Data/                            # Datasets bruts (gitignored)
-│   ├── ai4i2020.csv
-│   └── predictive_maintenance_v3.csv
-│
-├── infa/                            # Scripts infrastructure
-│   └── upload_bronze.py             # Upload ADLS Gen2 sécurisé
-│
-├── notebooks/                       # Databricks notebooks exportés
-│   ├── 01_bronze_silver.ipynb       # ETL nettoyage PySpark
-│   ├── 02_silver_gold.ipynb         # Star Schema Gold
-│   └── 03_eda_exploration.ipynb     # Analyse exploratoire
-│
-├── ml/                              # Machine Learning
-│   ├── train.py                     # Entraînement XGBoost + MLflow
-│   ├── evaluate.py                  # Évaluation modèles
-│   ├── api/
-│   │   └── app.py                   # FastAPI endpoint /predict
-│   └── Dockerfile                   # Conteneurisation modèle
-│
-├── powerbi/
-│   └── ocp_slurry_dashboard.pbix    # Dashboard Power BI
-│
-├── docs/
-│   ├── architecture.png             # Schéma Lakehouse
-│   ├── DATA_DICTIONARY.md           # Dictionnaire de données
-│   ├── ADF_PIPELINE.md              # Documentation ADF
-│   └── POWERBI_RLS.md               # Documentation RLS 3 profils
-│
-└── .github/
-    └── workflows/
-        └── retrain.yml              # CI/CD GitHub Actions
+├── .github/workflows/ci.yml     ← CI/CD GitHub Actions
+├── app/                          ← FastAPI
+│   ├── main.py                   ← endpoints
+│   ├── model.py                  ← logique prédiction
+│   └── schemas.py                ← validation Pydantic
+├── data/                         ← datasets CSV
+├── images/                       ← screenshots dashboards
+├── infra/                        ← scripts Azure
+├── notebooks/                    ← pipeline complet
+│   ├── 01_bronze_to_silver.ipynb
+│   ├── 02_feature_engineering.ipynb
+│   ├── 03_silver_quality_report.ipynb
+│   ├── 04_gold_star_schema.ipynb
+│   ├── 05_ml_maintenance_predictive.ipynb
+│   ├── 06_mlflow_tracking.ipynb
+│   ├── 07_register_gold_tables.ipynb
+│   └── EDA_OCP_Pipeline.ipynb
+├── reports/                      ← graphiques ML
+│   ├── confusion_matrix_rf.png
+│   ├── feature_importance.png
+│   └── mlflow_comparison.png
+├── models/                       ← scaler.pkl
+├── Dockerfile
+├── requirements.txt
+└── README.md
 ```
 
 ---
 
-## Progression
-
-| Phase | Métier | Statut | Livrables |
-|---|---|---|---|
-| **Phase 1** — Azure Setup + Bronze | Cloud / MLOps | ✅ **Terminé** | ADLS Gen2 · Databricks · données chargées |
-| **Phase 2a** — Bronze → Silver | Data Analyst | 🔄 En cours | Notebook nettoyage PySpark |
-| **Phase 2b** — Gold + ADF | Data Analyst | ⏳ À faire | Star Schema · pipeline auto |
-| **Phase 3a** — ML + MLflow | Data Scientist | ⏳ À faire | 4 modèles · F1 > 0.85 |
-| **Phase 3b** — FastAPI + Docker | Data Scientist + Cloud | ⏳ À faire | API déployée · badge CI/CD vert |
-| **Phase 4** — Power BI + RLS | Data Analyst | ⏳ À faire | Dashboard 3 profils publié |
-| **Portfolio** — README + LinkedIn | Tous | ⏳ À faire | Repo public · article publié |
-
-### Métriques Cibles
-
-| Modèle | Métrique | Cible |
-|---|---|---|
-| XGBoost Panne J+1 | F1-Score | > 0.85 |
-| XGBoost Panne J+1 | AUC-ROC | > 0.92 |
-| Isolation Forest Anomalies | Précision | > 88% |
-| Prophet Débit | MAPE | < 8% |
-| API /predict | Latence | < 200ms |
-
----
-
-## Lancer le Projet
-
-### Prérequis
+## Lancer l'API
 
 ```bash
-pip install azure-storage-file-datalake azure-identity pandas pyarrow matplotlib
-az login
+# Installer les dépendances
+pip install -r requirements.txt
+
+# Lancer le serveur
+uvicorn app.main:app --reload --port 8000
 ```
 
-### 1. Upload des données Bronze
+### Exemple de prédiction
 
 ```bash
-cd infa/
-python upload_bronze.py
-```
-
-### 2. Générer le schéma d'architecture
-
-```bash
-python generate_architecture.py
-# → docs/architecture.png
-```
-
-### 3. Notebooks Databricks
-
-Importer dans Databricks Community Edition :
-- `notebooks/01_bronze_silver.ipynb`
-- `notebooks/02_silver_gold.ipynb`
-
-### 4. Lancer l'API localement (Phase 3)
-
-```bash
-docker build -t ocp-predictor:v1.0 ./ml/
-docker run -p 8000:8000 ocp-predictor:v1.0
 curl -X POST http://localhost:8000/predict \
   -H "Content-Type: application/json" \
-  -d '{"temperature": 308.6, "rpm": 1551, "torque": 42.8, "tool_wear": 0}'
+  -d '{
+    "air_temp_k": 298.5,
+    "process_temp_k": 308.7,
+    "rotation_speed_rpm": 1551.0,
+    "torque_nm": 42.8,
+    "tool_wear_min": 108.0,
+    "station_type": "M"
+  }'
+```
+
+### Réponse API
+
+```json
+{
+  "failure_predicted": false,
+  "failure_type": "NONE",
+  "probability": 0.12,
+  "risk_level": "LOW",
+  "recommendation": "Fonctionnement normal"
+}
 ```
 
 ---
 
-## Compétences Démontrées
+## CI/CD GitHub Actions
 
-Ce projet couvre les compétences les plus demandées en Data Engineering / Data Science au Maroc en 2026 :
+Le workflow `.github/workflows/ci.yml` exécute automatiquement 6 tests à chaque push :
 
-- **Cloud Azure** — ADLS Gen2, ADF, Azure ML, Key Vault, IAM
-- **Data Engineering** — PySpark, Delta Lake, Medallion Architecture, ETL
-- **Machine Learning** — XGBoost, Isolation Forest, Prophet, SMOTE, split temporel
-- **MLOps** — MLflow, Docker, FastAPI, GitHub Actions CI/CD
-- **Business Intelligence** — Power BI, DAX, RLS, Star Schema
-- **Gouvernance** — Data Lineage, Data Dictionary, SLA Qualité
+```
+✅ Checkout code
+✅ Setup Python 3.11
+✅ Install dependencies
+✅ Test API imports
+✅ Test schemas Pydantic (SensorInput)
+✅ Test prediction logic (predict)
+```
 
 ---
 
 ## Auteur
 
-**Meriem Merbouhi** — data engineer
-Projet Portfolio · OCP Slurry Pipeline Predictive Maintenance · 2026
-
----
-
-*Ce projet démontre la maîtrise d'une stack Data Enterprise complète,  
-de l'ingestion cloud jusqu'au dashboard décisionnel sécurisé,  
-en passant par le Machine Learning et le MLOps.*#   o c p - s l u r r y - p i p e l i n e  
- 
+**Meriem Merbouhi** — Data Analyst & Data Scientist  
+📧 meriem.merbouhi@hightech.edu  
+🔗 [GitHub](https://github.com/meriem-merbouhi/ocp-slurry-pipeline)

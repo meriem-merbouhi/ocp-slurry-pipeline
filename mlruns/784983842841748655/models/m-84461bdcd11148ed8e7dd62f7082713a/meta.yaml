@@ -1,0 +1,10 @@
+artifact_location: file:c:/Users/DELL£/Downloads/projet ocp/mlruns/784983842841748655/models/m-84461bdcd11148ed8e7dd62f7082713a/artifacts
+creation_timestamp: 1778652562361
+experiment_id: '784983842841748655'
+last_updated_timestamp: 1778652577857
+model_id: m-84461bdcd11148ed8e7dd62f7082713a
+model_type: null
+name: model
+source_run_id: 64e0b663f3844f69b1850512a304e9dd
+status: 2
+status_message: null

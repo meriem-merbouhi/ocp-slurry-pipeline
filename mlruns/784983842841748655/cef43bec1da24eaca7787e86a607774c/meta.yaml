@@ -1,0 +1,14 @@
+artifact_uri: file:c:/Users/DELL£/Downloads/projet ocp/mlruns/784983842841748655/cef43bec1da24eaca7787e86a607774c/artifacts
+end_time: 1778652540493
+entry_point_name: ''
+experiment_id: '784983842841748655'
+lifecycle_stage: active
+run_id: cef43bec1da24eaca7787e86a607774c
+run_name: RF_Baseline
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1778652526016
+status: 3
+tags: []
+user_id: DELL£
